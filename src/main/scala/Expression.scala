@@ -25,8 +25,6 @@ class ArithmeticExpression extends JavaTokenParsers with Expression {
     }
   }
 
-  private def identifier: Parser[String] = """[a-zA-Z_]+""".r
-
   private def expr: Parser[Double] = term~rep("+"~term | "-"~term) ^^ {
     case term~ops =>
       ops.foldLeft(term) {
@@ -49,8 +47,8 @@ class ArithmeticExpression extends JavaTokenParsers with Expression {
       case "-"~v => -v.toDouble
       case "+"~v => v.toDouble
     }, { i => s"unexpected error [$i]" })
-  | identifier                           ^? ({ case i if env.contains(i) => env(i) }, { i => s"$i is not found in context"})
-  | ("-" | "+")~identifier               ^? ({
+  | ident                                ^? ({ case i if env.contains(i) => env(i) }, { i => s"$i is not found in context"})
+  | ("-" | "+")~ident                    ^? ({
       case "-"~v if env.contains(v) => -env(v)
       case "+"~v if env.contains(v) => env(v)
     }, { case _~i => s"$i is not found in context" })
