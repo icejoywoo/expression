@@ -6,7 +6,7 @@ import scala.util.parsing.combinator._
 
 
 trait Expression {
-  val env: mutable.Map[String, Double]
+  val env: mutable.Map[String, Double] = mutable.Map.empty
 
   def addVariable(name: String, value: Double) = env += name -> value
   def addVariables(kvs: (String, Double)*) = env ++= kvs
@@ -15,8 +15,6 @@ trait Expression {
 }
 
 class ArithmeticExpression extends JavaTokenParsers with Expression {
-  override val env: mutable.Map[String, Double] = mutable.Map.empty
-
   def evaluate(expression: String): Try[Double] = {
     parseAll(expr, expression) match {
       case Success(matched,_) => scala.util.Success(matched.asInstanceOf[Double])
@@ -59,7 +57,6 @@ class ArithmeticExpression extends JavaTokenParsers with Expression {
 }
 
 class EvalExpression extends Expression {
-  override val env: mutable.Map[String, Double] = mutable.Map.empty
   private val cache: mutable.Map[String, Eval] = mutable.Map.empty
 
   private def getEval: Eval = {
