@@ -65,7 +65,9 @@ class EvalExpression extends Expression {
       cache(initilization)
     } else {
       val e = new Eval
-      e.compile(initilization)
+      e.compile(s"""object $$Env {
+      |$initilization
+      |}""".stripMargin)
       cache += initilization -> e
       e
     }
@@ -74,10 +76,12 @@ class EvalExpression extends Expression {
   def evaluate(expression: String): Try[Double] = {
     val eval = getEval
     try {
-      scala.util.Success(eval.inPlace[Double](expression))
+      scala.util.Success(
+        eval.inPlace[java.lang.Number](s"""import $$Env._
+        |$expression""".stripMargin).doubleValue)
     } catch {
       case e: eval.CompilerException =>
-        println(s"WARN: [generated code] code[$expression] exception[${e.getMessage}]")
+        println(s"WARN: [failed to eval code] code[$expression] exception[${e.getMessage}]")
         scala.util.Failure(e)
     }    
   }
@@ -129,5 +133,34 @@ object TestArithmeticExpressionInNewClass {
 
     assert(a.evaluate("2 * (3 + 7))").isFailure)
     assert(a.evaluate("(2 * (3 + 7)").isFailure)
+  }
+}
+
+object TestEvalExpression extends EvalExpression  {
+  def main(args: Array[String]): Unit = {
+    env += "a" -> 5
+    env += "b" -> 6
+    env += "c" -> 7
+
+    assert(evaluate("2 * (3 + 7) * a + (b + c) * c").get == 191.0)
+    assert(evaluate("2 * (3 + 7) * (a + (b + c) * c)").get == 1920.0)
+    assert(evaluate("a + 4").get == 9.0)
+    assert(evaluate("((a) + (4))").get == 9.0)
+    assert(evaluate("a / 20 + 10 + a * b + c * 10").get == 110.25)
+    assert(evaluate("+5").get == 5.0)
+    assert(evaluate("-a").get == -5.0)
+
+    evaluate("2 * (3 + 7)") match {
+      case scala.util.Success(value) => println(value)
+      case scala.util.Failure(e) => println("FAILURE: " + e.getMessage)
+    }
+
+    evaluate("2 * (3 + 7))") match {
+      case scala.util.Success(value) => println(value)
+      case scala.util.Failure(e) => println("FAILURE: " + e.getMessage)
+    }
+
+    assert(evaluate("2 * (3 + 7))").isFailure)
+    assert(evaluate("(2 * (3 + 7)").isFailure)
   }
 }
